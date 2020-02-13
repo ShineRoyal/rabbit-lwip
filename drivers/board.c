@@ -15,7 +15,6 @@
 #define DBG_TAG "board"
 #define DBG_LVL DBG_INFO
 #include <rtdbg.h>
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -27,13 +26,12 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 25;
+  RCC_OscInitStruct.PLL.PLLN = 336;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -53,15 +51,16 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
 }
 
 int clock_information(void)
 {
-    LOG_D("System Clock information");
-    LOG_D("SYSCLK_Frequency = %d", HAL_RCC_GetSysClockFreq());
-    LOG_D("HCLK_Frequency   = %d", HAL_RCC_GetHCLKFreq());
-    LOG_D("PCLK1_Frequency  = %d", HAL_RCC_GetPCLK1Freq());
-    LOG_D("PCLK2_Frequency  = %d", HAL_RCC_GetPCLK2Freq());
+    rt_kprintf("System Clock information");
+    rt_kprintf("SYSCLK_Frequency = %d\n", HAL_RCC_GetSysClockFreq());
+    rt_kprintf("HCLK_Frequency   = %d\n", HAL_RCC_GetHCLKFreq());
+    rt_kprintf("PCLK1_Frequency  = %d\n", HAL_RCC_GetPCLK1Freq());
+    rt_kprintf("PCLK2_Frequency  = %d\n", HAL_RCC_GetPCLK2Freq());
 
     return RT_EOK;
 }
