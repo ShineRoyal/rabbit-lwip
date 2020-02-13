@@ -15,6 +15,7 @@
 #define DBG_TAG "board"
 #define DBG_LVL DBG_INFO
 #include <rtdbg.h>
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -51,8 +52,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
 }
+
+
 
 int clock_information(void)
 {
