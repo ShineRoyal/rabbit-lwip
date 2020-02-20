@@ -101,7 +101,7 @@
 
 /* POSIX layer and C standard library */
 
-#define RT_LIBC_USING_TIME
+#define RT_USING_LIBC
 /* end of POSIX layer and C standard library */
 
 /* Network */

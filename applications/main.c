@@ -35,3 +35,70 @@ int main(void)
 
     return RT_EOK;
 }
+
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
+#include <stdlib.h>
+
+static const char *send_data = "GET /download/rt-thread.txt HTTP/1.1\r\n"
+    "Host: www.rt-thread.org\r\n"
+    "User-Agent: rtthread/4.0.1 rtt\r\n\r\n";
+
+void udpclient(int argc, char **argv)
+{
+    int sock, port, count;
+    struct hostent *host;
+    struct sockaddr_in server_addr;
+    const char *url;
+
+    /* 接收到的参数小于 3 个 */
+    if (argc < 3)
+    {
+        rt_kprintf("Usage: udpclient URL PORT [COUNT = 10]\n");
+        rt_kprintf("Like: tcpclient 192.168.12.44 5000\n");
+        return ;
+    }
+
+    url = argv[1];
+    port = strtoul(argv[2], 0, 10);
+
+    if (argc> 3)
+        count = strtoul(argv[3], 0, 10);
+    else
+        count = 10;
+
+    /* 通过函数入口参数 url 获得 host 地址（如果是域名，会做域名解析） */
+    host = (struct hostent *) gethostbyname(url);
+
+    /* 创建一个 socket，类型是 SOCK_DGRAM，UDP 类型 */
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+    {
+        rt_kprintf("Socket error\n");
+        return;
+    }
+
+    /* 初始化预连接的服务端地址 */
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr = *((struct in_addr *)host->h_addr);
+    rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
+
+    /* 总计发送 count 次数据 */
+    while (count)
+    {
+        /* 发送数据到服务远端 */
+        sendto(sock, send_data, strlen(send_data), 0,
+               (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+
+        /* 线程休眠一段时间 */
+        rt_thread_delay(50);
+
+        /* 计数值减一 */
+        count --;
+    }
+
+    /* 关闭这个 socket */
+    closesocket(sock);
+}
+MSH_CMD_EXPORT(udpclient,udpclient);
