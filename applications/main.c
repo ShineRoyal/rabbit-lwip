@@ -42,14 +42,14 @@ int main(void)
 #include <stdlib.h>
 
 static const char *send_data = "GET /download/rt-thread.txt HTTP/1.1\r\n"
-    "Host: www.rt-thread.org\r\n"
-    "User-Agent: rtthread/4.0.1 rtt\r\n\r\n";
+        "Host: www.rt-thread.org\r\n"
+        "User-Agent: rtthread/4.0.1 rtt\r\n\r\n";
 
 void udpclient(int argc, char **argv)
 {
     int sock, port, count;
     struct hostent *host;
-    struct sockaddr_in server_addr;
+    struct sockaddr_in send_addr, recv_addr;
     const char *url;
 
     /* 接收到的参数小于 3 个 */
@@ -57,13 +57,13 @@ void udpclient(int argc, char **argv)
     {
         rt_kprintf("Usage: udpclient URL PORT [COUNT = 10]\n");
         rt_kprintf("Like: tcpclient 192.168.12.44 5000\n");
-        return ;
+        return;
     }
 
     url = argv[1];
     port = strtoul(argv[2], 0, 10);
 
-    if (argc> 3)
+    if (argc > 3)
         count = strtoul(argv[3], 0, 10);
     else
         count = 10;
@@ -79,26 +79,32 @@ void udpclient(int argc, char **argv)
     }
 
     /* 初始化预连接的服务端地址 */
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    server_addr.sin_addr = *((struct in_addr *)host->h_addr);
-    rt_memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
+    send_addr.sin_family = AF_INET;
+    send_addr.sin_port = htons(port);
+    send_addr.sin_addr = *((struct in_addr *) host->h_addr);
+    rt_memset(&(send_addr.sin_zero), 0, sizeof(send_addr.sin_zero));
+
+    recv_addr.sin_family = AF_INET;
+    recv_addr.sin_port = IPADDR_ANY;
+    recv_addr.sin_addr = *((struct in_addr *) host->h_addr);
+    rt_memset(&(recv_addr.sin_zero), 0, sizeof(recv_addr.sin_zero));
 
     /* 总计发送 count 次数据 */
     while (count)
     {
         /* 发送数据到服务远端 */
-        sendto(sock, send_data, strlen(send_data), 0,
-               (struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-
+        sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr * )&send_addr, sizeof(struct sockaddr));
         /* 线程休眠一段时间 */
         rt_thread_delay(50);
-
+        char str[100];
+        memset(str, 0, sizeof(str));
+        recvfrom(sock, str, sizeof(str), 0, &recv_addr, sizeof(recv_addr));
+        rt_kprintf("%s:%d=>%s\n", inet_ntoa(recv_addr.sin_addr), ntohs(recv_addr.sin_port), str);
         /* 计数值减一 */
-        count --;
+        count--;
     }
 
     /* 关闭这个 socket */
     closesocket(sock);
 }
-MSH_CMD_EXPORT(udpclient,udpclient);
+MSH_CMD_EXPORT(udpclient, udpclient);
