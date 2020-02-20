@@ -41,6 +41,8 @@ extern "C" {
   */
 
 #define BSP_USING_UART1
+#define PHY_USING_LAN8720A
+
 
 #if defined(BSP_USING_UART1)
 #define UART1_TX_PORT       GPIOA
