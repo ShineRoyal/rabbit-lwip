@@ -66,7 +66,7 @@ void udpclient(int argc, char **argv)
     while (count)
     {
         /* 发送数据到服务远端 */
-        sendto(sock, send_data, strlen(send_data), 0, (struct sockaddr * )&send_addr, sizeof(struct sockaddr));
+        sendto(sock, send_data, strlen(send_data), 0, &send_addr, sizeof(struct sockaddr));
 
         /* 线程休眠一段时间 */
         rt_thread_delay(50);
