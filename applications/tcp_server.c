@@ -14,11 +14,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 #define DBG_TAG "tcpserver"
 #define DBG_LVL DBG_LOG
 #include <rtdbg.h>
-
 
 static const char *send_data = "hello RT-Thread\n";
 
@@ -32,15 +30,8 @@ struct client_info
 void client_thread_entry(void *param)
 {
     struct client_info* client = param;
-    LOG_D("[%d]%s:%d is connect...", client->socketnum, inet_ntoa(client->addr.sin_addr),
-            ntohs(client->addr.sin_port));
+    LOG_D("[%d]%s:%d is connect...", client->socketnum, inet_ntoa(client->addr.sin_addr), ntohs(client->addr.sin_port));
     send(client->socketnum, (const void* )send_data, strlen(send_data), 0);
-
-    struct timeval tv_out;
-    tv_out.tv_sec = 5;
-    tv_out.tv_usec = 0;
-    setsockopt(client->socketnum, SOL_SOCKET, SO_RCVTIMEO, &tv_out, sizeof(tv_out));
-    LOG_D("[%d]set timeout %d.%03ds",client->socketnum, tv_out.tv_sec, tv_out.tv_usec);
     while (1)
     {
         char str[100];
@@ -51,8 +42,8 @@ void client_thread_entry(void *param)
             goto __exit;
         else if (bytes == -1)
             goto __error;
-        LOG_D("[%d]%s:%d=>%s...", client->socketnum, inet_ntoa(client->addr.sin_addr),
-                ntohs(client->addr.sin_port), str);
+        LOG_D("[%d]%s:%d=>%s...", client->socketnum, inet_ntoa(client->addr.sin_addr), ntohs(client->addr.sin_port),
+                str);
         send((int )client->socketnum, (const void * )str, (size_t )strlen(str), 0);
     }
     __exit: LOG_D("[%d]%s:%d is disconnect...", client->socketnum, inet_ntoa(client->addr.sin_addr),
@@ -69,7 +60,7 @@ void client_thread_entry(void *param)
 
 }
 
-void tcpserver(int argc, char **argv)
+void tcpserver_thread_entry(int argc, char **argv)
 {
     rt_thread_t tid = RT_NULL;
     int sock_listen, sock_connect, port;
@@ -112,7 +103,7 @@ void tcpserver(int argc, char **argv)
         goto __exit;
     }
 
-    listen(sock_listen, 3);
+    listen(sock_listen, 2);
     LOG_D("begin listing...");
 
     while (1)
@@ -150,4 +141,16 @@ void tcpserver(int argc, char **argv)
     closesocket(sock_listen);
     return;
 }
-MSH_CMD_EXPORT(tcpserver, tcpserver);
+
+int tcpserver_app_init(void *param)
+{
+    rt_thread_t tid;
+    tid = rt_thread_create("tcpsrv", tcpserver_thread_entry, (void*) RT_NULL, 4096, 25, 10);
+    if (tid != RT_NULL)
+    {
+        rt_thread_startup(tid);
+    }
+    return 0;
+}
+
+INIT_APP_EXPORT(tcpserver_app_init);
