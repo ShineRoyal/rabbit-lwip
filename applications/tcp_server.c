@@ -9,10 +9,10 @@
  */
 
 #include <sys/socket.h>
+#include <netdev.h>
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
-
 static const char *send_data = "hello RT-Thread\n";
 
 struct client_info
@@ -31,7 +31,7 @@ void client_thread_entry(void *param)
     while (1)
     {
         char str[100];
-        memset(str, 0, sizeof(str));
+        rt_memset(str, 0, sizeof(str));
         int bytes = recv(client->socketnum, str, sizeof(str), 0);
         if (bytes == 0)
             goto __exit;
@@ -65,10 +65,21 @@ void tcpserver(int argc, char **argv)
         return;
     }
 
+    struct netdev *netdev = RT_NULL;
+
+    netdev = netdev_get_by_family(AF_INET);
+    if (netdev == RT_NULL)
+    {
+        rt_kprintf("get network interface device by AF_INET failed.\n");
+    }
+
+    rt_kprintf("localip:%s\n",inet_ntoa(netdev->ip_addr));
     /* 初始化预连接的服务端地址 */
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_port = htons(port);
     listen_addr.sin_addr = *((struct in_addr *) host->h_addr);
+    listen_addr.sin_addr.s_addr = netdev->ip_addr.addr;
+
     rt_memset(&(listen_addr.sin_zero), 0, sizeof(listen_addr.sin_zero));
 
     if (bind(sock_listen, (struct sockaddr * )&listen_addr, sizeof(struct sockaddr)) < 0)
@@ -98,7 +109,7 @@ void tcpserver(int argc, char **argv)
         struct client_info *client;
         client = rt_malloc(sizeof(struct client_info));
         client->socketnum = sock_connect;
-        memcpy(&client->addr, &connect_addr, sizeof(struct sockaddr_in));
+        rt_memcpy(&client->addr, &connect_addr, sizeof(struct sockaddr_in));
         client->sockaddrlen = sin_size;
         tid = rt_thread_create(tid_name, client_thread_entry, (void*) client, 4096, 25, 10);
         if (tid == RT_NULL)
