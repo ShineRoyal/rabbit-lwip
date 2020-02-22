@@ -13,6 +13,13 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
+
+
+#define DBG_TAG "tcpserver"
+#define DBG_LVL DBG_LOG
+#include <rtdbg.h>
+
+
 static const char *send_data = "hello RT-Thread\n";
 
 struct client_info
@@ -25,24 +32,41 @@ struct client_info
 void client_thread_entry(void *param)
 {
     struct client_info* client = param;
-    rt_kprintf("[%d]%s:%d is connect...\n", client->socketnum, inet_ntoa(client->addr.sin_addr),
+    LOG_D("[%d]%s:%d is connect...", client->socketnum, inet_ntoa(client->addr.sin_addr),
             ntohs(client->addr.sin_port));
     send(client->socketnum, (const void* )send_data, strlen(send_data), 0);
+
+    struct timeval tv_out;
+    tv_out.tv_sec = 5;
+    tv_out.tv_usec = 0;
+    setsockopt(client->socketnum, SOL_SOCKET, SO_RCVTIMEO, &tv_out, sizeof(tv_out));
+    LOG_D("[%d]set timeout %d.%03ds",client->socketnum, tv_out.tv_sec, tv_out.tv_usec);
     while (1)
     {
         char str[100];
         rt_memset(str, 0, sizeof(str));
         int bytes = recv(client->socketnum, str, sizeof(str), 0);
+        LOG_D("bytes:%d", bytes);
         if (bytes == 0)
             goto __exit;
-        rt_kprintf("[%d]%s:%d=>%s...\n", client->socketnum, inet_ntoa(client->addr.sin_addr),
+        else if (bytes == -1)
+            goto __error;
+        LOG_D("[%d]%s:%d=>%s...", client->socketnum, inet_ntoa(client->addr.sin_addr),
                 ntohs(client->addr.sin_port), str);
         send((int )client->socketnum, (const void * )str, (size_t )strlen(str), 0);
     }
-    __exit: rt_kprintf("[%d]%s:%d is disconnect...\n", client->socketnum, inet_ntoa(client->addr.sin_addr),
+    __exit: LOG_D("[%d]%s:%d is disconnect...", client->socketnum, inet_ntoa(client->addr.sin_addr),
             ntohs(client->addr.sin_port));
     rt_free(client);
     closesocket(client->socketnum);
+    return;
+
+    __error: LOG_D("[%d]%s:%d is error...", client->socketnum, inet_ntoa(client->addr.sin_addr),
+            ntohs(client->addr.sin_port));
+    rt_free(client);
+    closesocket(client->socketnum);
+    return;
+
 }
 
 void tcpserver(int argc, char **argv)
@@ -61,7 +85,7 @@ void tcpserver(int argc, char **argv)
 
     if ((sock_listen = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
-        rt_kprintf("Socket error\n");
+        LOG_D("Socket error");
         return;
     }
 
@@ -70,10 +94,10 @@ void tcpserver(int argc, char **argv)
     netdev = netdev_get_by_family(AF_INET);
     if (netdev == RT_NULL)
     {
-        rt_kprintf("get network interface device by AF_INET failed.\n");
+        LOG_D("get network interface device by AF_INET failed.");
     }
 
-    rt_kprintf("localip:%s\n",inet_ntoa(netdev->ip_addr));
+    LOG_D("localip:%s", inet_ntoa(netdev->ip_addr));
     /* 初始化预连接的服务端地址 */
     listen_addr.sin_family = AF_INET;
     listen_addr.sin_port = htons(port);
@@ -84,20 +108,21 @@ void tcpserver(int argc, char **argv)
 
     if (bind(sock_listen, (struct sockaddr * )&listen_addr, sizeof(struct sockaddr)) < 0)
     {
-        rt_kprintf("Bind fail!\n");
+        LOG_D("Bind fail!");
         goto __exit;
     }
 
     listen(sock_listen, 3);
-    rt_kprintf("begin listing...\n");
+    LOG_D("begin listing...");
 
     while (1)
     {
         int sin_size = sizeof(struct sockaddr_in);
+
         sock_connect = accept(sock_listen, (struct sockaddr* )&connect_addr, (socklen_t* )&sin_size);
         if (sock_connect == -1)
         {
-            rt_kprintf("no socket,waitting others socket disconnect.\n");
+            LOG_D("no socket,waitting others socket disconnect.");
             continue;
         }
 
@@ -114,15 +139,15 @@ void tcpserver(int argc, char **argv)
         tid = rt_thread_create(tid_name, client_thread_entry, (void*) client, 4096, 25, 10);
         if (tid == RT_NULL)
         {
-
-            rt_kprintf("no memery for thread %s startup failed!\n", tid_name);
+            LOG_D("no memery for thread %s startup failed!", tid_name);
             rt_free(client);
             continue;
         }
         rt_thread_startup(tid);
     }
-    __exit: rt_kprintf("close listener...\n");
+    __exit: LOG_D("close listener...");
     /* 关闭这个 socket */
     closesocket(sock_listen);
+    return;
 }
 MSH_CMD_EXPORT(tcpserver, tcpserver);
