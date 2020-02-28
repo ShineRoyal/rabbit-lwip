@@ -42,6 +42,8 @@ extern "C" {
 
 #define BSP_USING_UART1
 #define PHY_USING_LAN8720A
+#define BSP_USING_SDIO
+#define BSP_USING_SDCARD
 
 
 #if defined(BSP_USING_UART1)

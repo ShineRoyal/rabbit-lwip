@@ -153,4 +153,4 @@ int tcpserver_app_init(void *param)
     return 0;
 }
 
-INIT_APP_EXPORT(tcpserver_app_init);
+//INIT_APP_EXPORT(tcpserver_app_init);
